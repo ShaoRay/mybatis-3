@@ -49,24 +49,67 @@ import org.apache.ibatis.util.MapUtil;
  * @author Clinton Begin
  */
 public class Reflector {
-
+  /**
+   * 对应的类
+   */
   private final Class<?> type;
+  /**
+   * 可读属性数组
+   */
   private final String[] readablePropertyNames;
+  /**
+   * 可写属性集合
+   */
   private final String[] writablePropertyNames;
+  /**
+   * 属性对应的 setting 方法的映射。
+   *
+   * key 为属性名称
+   * value 为 Invoker 对象
+   */
   private final Map<String, Invoker> setMethods = new HashMap<>();
+  /**
+   * 属性对应的 getting 方法的映射。
+   *
+   * key 为属性名称
+   * value 为 Invoker 对象
+   */
   private final Map<String, Invoker> getMethods = new HashMap<>();
+  /**
+   * 属性对应的 setting 方法的方法参数类型的映射。{@link #setMethods}
+   *
+   * key 为属性名称
+   * value 为方法参数类型
+   */
   private final Map<String, Class<?>> setTypes = new HashMap<>();
+  /**
+   * 属性对应的 getting 方法的返回值类型的映射。{@link #getMethods}
+   *
+   * key 为属性名称
+   * value 为返回值的类型
+   */
   private final Map<String, Class<?>> getTypes = new HashMap<>();
+  /**
+   * 默认构造方法
+   */
   private Constructor<?> defaultConstructor;
-
+  /**
+   * 不区分大小写的属性集合
+   */
   private Map<String, String> caseInsensitivePropertyMap = new HashMap<>();
 
   public Reflector(Class<?> clazz) {
+    // 设置对应的类
     type = clazz;
+    // <1> 初始化 defaultConstructor
     addDefaultConstructor(clazz);
+    // <2> // 初始化 getMethods 和 getTypes ，通过遍历 getting 方法
     addGetMethods(clazz);
+    // <3> // 初始化 setMethods 和 setTypes ，通过遍历 setting 方法。
     addSetMethods(clazz);
+    // <4> // 初始化 getMethods + getTypes 和 setMethods + setTypes ，通过遍历 fields 属性。
     addFields(clazz);
+    // <5> 初始化 readablePropertyNames、writeablePropertyNames、caseInsensitivePropertyMap 属性
     readablePropertyNames = getMethods.keySet().toArray(new String[0]);
     writablePropertyNames = setMethods.keySet().toArray(new String[0]);
     for (String propName : readablePropertyNames) {
@@ -78,16 +121,25 @@ public class Reflector {
   }
 
   private void addDefaultConstructor(Class<?> clazz) {
+    // 获得所有构造方法
     Constructor<?>[] constructors = clazz.getDeclaredConstructors();
+    // 判断无参的构造方法
     Arrays.stream(constructors).filter(constructor -> constructor.getParameterTypes().length == 0)
       .findAny().ifPresent(constructor -> this.defaultConstructor = constructor);
   }
 
   private void addGetMethods(Class<?> clazz) {
+    // <1> 属性与其 getting 方法的映射。
     Map<String, List<Method>> conflictingGetters = new HashMap<>();
+    // <2> 获得所有方法
     Method[] methods = getClassMethods(clazz);
-    Arrays.stream(methods).filter(m -> m.getParameterTypes().length == 0 && PropertyNamer.isGetter(m.getName()))
+    // <3.1> 参数大于 0 ，说明不是 getting 方法，忽略
+    Arrays.stream(methods).filter(m -> m.getParameterTypes().length == 0
+      // <3.2> 以 get 和 is 方法名开头，说明是 getting 方法
+      && PropertyNamer.isGetter(m.getName()))
+      // <3.4> 添加到 conflictingGetters 中
       .forEach(m -> addMethodConflict(conflictingGetters, PropertyNamer.methodToProperty(m.getName()), m));
+    // <4> 解决 getting 冲突方法
     resolveGetterConflicts(conflictingGetters);
   }
 
@@ -274,9 +326,12 @@ public class Reflector {
    * @return An array containing all methods in this class
    */
   private Method[] getClassMethods(Class<?> clazz) {
+    // 每个方法签名与该方法的映射
     Map<String, Method> uniqueMethods = new HashMap<>();
     Class<?> currentClass = clazz;
+    // 循环类，类的父类，类的父类的父类，直到父类为 Object
     while (currentClass != null && currentClass != Object.class) {
+      // <1> 记录当前类定义的方法
       addUniqueMethods(uniqueMethods, currentClass.getDeclaredMethods());
 
       // we also need to look for interface methods -
@@ -285,10 +340,10 @@ public class Reflector {
       for (Class<?> anInterface : interfaces) {
         addUniqueMethods(uniqueMethods, anInterface.getMethods());
       }
-
+      // 获得父类
       currentClass = currentClass.getSuperclass();
     }
-
+    // 转换成 Method 数组返回
     Collection<Method> methods = uniqueMethods.values();
 
     return methods.toArray(new Method[0]);
