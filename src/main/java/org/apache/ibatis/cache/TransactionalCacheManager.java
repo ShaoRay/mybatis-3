@@ -25,7 +25,9 @@ import org.apache.ibatis.util.MapUtil;
  * @author Clinton Begin
  */
 public class TransactionalCacheManager {
-
+  /**
+   * Cache 和 TransactionalCache 的映射
+   */
   private final Map<Cache, TransactionalCache> transactionalCaches = new HashMap<>();
 
   public void clear(Cache cache) {
