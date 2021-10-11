@@ -50,6 +50,7 @@ public class MapperProxyFactory<T> {
 
   public T newInstance(SqlSession sqlSession) {
     final MapperProxy<T> mapperProxy = new MapperProxy<>(sqlSession, mapperInterface, methodCache);
+    //返回代理类
     return newInstance(mapperProxy);
   }
 
