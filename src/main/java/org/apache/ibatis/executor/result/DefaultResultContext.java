@@ -21,9 +21,17 @@ import org.apache.ibatis.session.ResultContext;
  * @author Clinton Begin
  */
 public class DefaultResultContext<T> implements ResultContext<T> {
-
+  /**
+   * 当前结果对象
+   */
   private T resultObject;
+  /**
+   * 总的结果对象的数量
+   */
   private int resultCount;
+  /**
+   * 是否暂停
+   */
   private boolean stopped;
 
   public DefaultResultContext() {
@@ -46,7 +54,11 @@ public class DefaultResultContext<T> implements ResultContext<T> {
   public boolean isStopped() {
     return stopped;
   }
-
+  /**
+   * 当前结果对象
+   *
+   * @param resultObject 当前结果对象
+   */
   public void nextResultObject(T resultObject) {
     resultCount++;
     this.resultObject = resultObject;
